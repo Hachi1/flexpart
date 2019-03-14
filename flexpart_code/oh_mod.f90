@@ -25,7 +25,6 @@ module oh_mod
   !for this field
 
   implicit none
-  save
 
   real,allocatable, dimension (:,:,:,:) :: OH_field
   real,allocatable, dimension (:) :: OH_field_height

@@ -28,7 +28,7 @@ subroutine releaseparticles(itime)
   !     It searches for a "vacant" storage space and assigns all particle      *
   !     information to that space. A space is vacant either when no particle   *
   !     is yet assigned to it, or when it's particle is expired and, thus,     *
-  !     the storage space is made available to a new particle                  *
+  !     the storage space is made available to a new particle.                 *
   !                                                                            *
   !     Author: A. Stohl                                                       *
   !                                                                            *
@@ -52,11 +52,11 @@ subroutine releaseparticles(itime)
 
   implicit none
 
-  real :: xaux,yaux,zaux,ran1
-  real(kind=dp) :: rfraction,average_timecorrect
+  !real xaux,yaux,zaux,ran1,rfraction,xmasssave(maxpoint)
+  real :: xaux,yaux,zaux,ran1,rfraction
   real :: topo,rhoaux(2),r,t,rhoout,ddx,ddy,rddx,rddy,p1,p2,p3,p4
   real :: dz1,dz2,dz,xtn,ytn,xlonav,timecorrect(maxspec),press,pressold
-  real :: presspart
+  real :: presspart,average_timecorrect
   integer :: itime,numrel,i,j,k,n,ix,jy,ixp,jyp,ipart,minpart,ii
   integer :: indz,indzp,kz,ngrid
   integer :: nweeks,ndayofweek,nhour,jjjjmmdd,ihmmss,mm
@@ -109,26 +109,26 @@ subroutine releaseparticles(itime)
   ! area (those with release starting at surface) and point (release starting above surface) sources
   ! Also, calculate an average time correction factor (species independent)
   !*****************************************************************************
-      average_timecorrect=0.0_dp
+      average_timecorrect=0.
       do k=1,nspec
         if (zpoint1(i).gt.0.5) then      ! point source
           timecorrect(k)=point_hour(k,nhour)*point_dow(k,ndayofweek)
         else                             ! area source
           timecorrect(k)=area_hour(k,nhour)*area_dow(k,ndayofweek)
         endif
-        average_timecorrect=average_timecorrect+real(timecorrect(k),kind=dp)
+        average_timecorrect=average_timecorrect+timecorrect(k)
       end do
-      average_timecorrect=average_timecorrect/real(nspec,kind=dp)
+      average_timecorrect=average_timecorrect/real(nspec)
 
   ! Determine number of particles to be released this time; at start and at end of release,
   ! only half the particles are released
   !*****************************************************************************
 
       if (ireleasestart(i).ne.ireleaseend(i)) then
-        rfraction=abs(real(npart(i),kind=dp)*real(lsynctime,kind=dp)/ &
-             real(ireleaseend(i)-ireleasestart(i),kind=dp))
+        rfraction=abs(real(npart(i))*real(lsynctime)/ &
+             real(ireleaseend(i)-ireleasestart(i)))
         if ((itime.eq.ireleasestart(i)).or. &
-             (itime.eq.ireleaseend(i))) rfraction=rfraction/2.0_dp
+             (itime.eq.ireleaseend(i))) rfraction=rfraction/2.
 
   ! Take the species-average time correction factor in order to scale the
   ! number of particles released this time
@@ -137,7 +137,7 @@ subroutine releaseparticles(itime)
 
         rfraction=rfraction+xmasssave(i)  ! number to be released at this time
         numrel=int(rfraction)
-        xmasssave(i)=rfraction-real(numrel,kind=dp)
+        xmasssave(i)=rfraction-real(numrel)
       else
         numrel=npart(i)
       endif

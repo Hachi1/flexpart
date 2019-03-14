@@ -26,7 +26,6 @@ module flux_mod
   ! areaeast,areanorth [m2] side areas of each grid cell
 
   implicit none
-  save
 
   real,allocatable, dimension (:,:,:,:,:,:,:) :: flux
 

@@ -1,4 +1,3 @@
-
 !**********************************************************************
 ! Copyright 1998,1999,2000,2001,2002,2005,2007,2008,2009,2010         *
 ! Andreas Stohl, Petra Seibert, A. Frank, Gerhard Wotawa,             *
@@ -20,295 +19,319 @@
 ! along with FLEXPART.  If not, see <http://www.gnu.org/licenses/>.   *
 !**********************************************************************
 
-       subroutine calcpv(n,uuh,vvh,pvh)
-         !                  i  i   i   o
-         !*****************************************************************************
-         !                                                                            *
-         !  Calculation of potential vorticity on 3-d grid.                           *
-         !                                                                            *
-         !     Author: P. James                                                       *
-         !     3 February 2000                                                        *
-         !                                                                            *
-         !     Adaptation to FLEXPART, A. Stohl, 1 May 2000                           *
-         !                                                                            *
-         !*****************************************************************************
-         !                                                                            *
-         ! Variables:                                                                 *
-         ! n                  temporal index for meteorological fields (1 to 2)       *
-         !                                                                            *
-         ! Constants:                                                                 *
-         !                                                                            *
-         !*****************************************************************************
-       
-         use par_mod
-         use com_mod
-         use omp_lib
- 
-         implicit none
-       
-         integer :: n,ix,jy,i,j,k,kl,jj,klvrp,klvrm,klpt,kup,kdn,kch
-         integer :: jux,juy,ivrm,ivrp,ivr
-         integer :: nlck
-         !SH additions/replacements
-         integer :: khi,klo
-         integer :: jyvp_arr(0:nymin1),jyvm_arr(0:nymin1),jumpy_arr(0:nymin1)
-         integer :: jybords(2),ixvp_arr(0:nxmin1),ixvm_arr(0:nxmin1),jumpx_arr(0:nxmin1)
-         !end SH
-         real :: vx(2),uy(2),phi,tanphi,cosphi,dvdx,dudy,f
-         real :: theta,thetap,thetam,dthetadp,dt1,dt2,dt,ppmk
-         real :: pvavr
-         real :: thup,thdn
-         !SH additions
-         real :: th_pre(0:nxmax-1,0:nymax-1,nuvzmax)
-         real :: ppmstore(0:nxmin1,0:nymin1,1:nuvz)
-         !end SH
-         !PARAMETERS
-         real,parameter :: eps=1.e-5
-         !DUMMY ARGUMENTS
-         real :: uuh(0:nxmax-1,0:nymax-1,nuvzmax)
-         real :: vvh(0:nxmax-1,0:nymax-1,nuvzmax)
-         real :: pvh(0:nxmax-1,0:nymax-1,nuvzmax)
+subroutine calcpv(n,uuh,vvh,pvh)
+  !                  i  i   i   o
+  !*****************************************************************************
+  !                                                                            *
+  !  Calculation of potential vorticity on 3-d grid.                           *
+  !                                                                            *
+  !     Author: P. James                                                       *
+  !     3 February 2000                                                        *
+  !                                                                            *
+  !     Adaptation to FLEXPART, A. Stohl, 1 May 2000                           *
+  !                                                                            *
+  !*****************************************************************************
+  !                                                                            *
+  ! Variables:                                                                 *
+  ! n                  temporal index for meteorological fields (1 to 2)       *
+  !                                                                            *
+  ! Constants:                                                                 *
+  !                                                                            *
+  !*****************************************************************************
 
-         write(*,*) 'enter calcpv parallelised...'
-         pvh(:,:,:)=0.0_8
-         
-         ! Set number of levels to check for adjacent theta
-         nlck=nuvz/3
+  use par_mod
+  use com_mod
 
-         ! *** Precalculate all theta levels for efficiency
-         do jy=0,nymin1
-           do ix=0,nxmin1
-             ppmstore(ix,jy,1:nuvz) = akz(1:nuvz)+bkz(1:nuvz)*ps(ix,jy,1,n)
-           end do
+  implicit none
+
+  integer :: n,ix,jy,i,j,k,kl,ii,jj,klvrp,klvrm,klpt,kup,kdn,kch
+  integer :: jyvp,jyvm,ixvp,ixvm,jumpx,jumpy,jux,juy,ivrm,ivrp,ivr
+  integer :: nlck
+  real :: vx(2),uy(2),phi,tanphi,cosphi,dvdx,dudy,f
+  real :: theta,thetap,thetam,dthetadp,dt1,dt2,dt,ppmk
+  real :: pvavr,ppml(nuvzmax)
+  real :: thup,thdn
+  real,parameter :: eps=1.e-5, p0=101325
+  real :: uuh(0:nxmax-1,0:nymax-1,nuvzmax)
+  real :: vvh(0:nxmax-1,0:nymax-1,nuvzmax)
+  real :: pvh(0:nxmax-1,0:nymax-1,nuvzmax)
+
+  ! Set number of levels to check for adjacent theta
+  nlck=nuvz/3
+  !
+  ! Loop over entire grid
+  !**********************
+  do jy=0,nymin1
+    if (sglobal.and.jy.eq.0) goto 10
+    if (nglobal.and.jy.eq.nymin1) goto 10
+    phi = (ylat0 + jy * dy) * pi / 180.
+    f = 0.00014585 * sin(phi)
+    tanphi = tan(phi)
+    cosphi = cos(phi)
+  ! Provide a virtual jy+1 and jy-1 in case we are on domain edge (Lat)
+      jyvp=jy+1
+      jyvm=jy-1
+      if (jy.eq.0) jyvm=0
+      if (jy.eq.nymin1) jyvp=nymin1
+  ! Define absolute gap length
+      jumpy=2
+      if (jy.eq.0.or.jy.eq.nymin1) jumpy=1
+      if (sglobal.and.jy.eq.1) then
+         jyvm=1
+         jumpy=1
+      end if
+      if (nglobal.and.jy.eq.ny-2) then
+         jyvp=ny-2
+         jumpy=1
+      end if
+      juy=jumpy
+  !
+    do ix=0,nxmin1
+  ! Provide a virtual ix+1 and ix-1 in case we are on domain edge (Long)
+      ixvp=ix+1
+      ixvm=ix-1
+      jumpx=2
+      if (xglobal) then
+         ivrp=ixvp
+         ivrm=ixvm
+         if (ixvm.lt.0) ivrm=ixvm+nxmin1
+         if (ixvp.ge.nx) ivrp=ixvp-nx+1
+      else
+        if (ix.eq.0) ixvm=0
+        if (ix.eq.nxmin1) ixvp=nxmin1
+        ivrp=ixvp
+        ivrm=ixvm
+  ! Define absolute gap length
+        if (ix.eq.0.or.ix.eq.nxmin1) jumpx=1
+      end if
+      jux=jumpx
+  ! Precalculate pressure values for efficiency
+      do kl=1,nuvz
+        ppml(kl)=akz(kl)+bkz(kl)*ps(ix,jy,1,n)
+      end do
+  !
+  ! Loop over the vertical
+  !***********************
+
+      do kl=1,nuvz
+        ppmk=akz(kl)+bkz(kl)*ps(ix,jy,1,n)
+        theta=tth(ix,jy,kl,n)*(100000./ppmk)**kappa
+        klvrp=kl+1
+        klvrm=kl-1
+        klpt=kl
+  ! If top or bottom level, dthetadp is evaluated between the current
+  ! level and the level inside, otherwise between level+1 and level-1
+  !
+        if (klvrp.gt.nuvz) klvrp=nuvz
+        if (klvrm.lt.1) klvrm=1
+        ppmk=akz(klvrp)+bkz(klvrp)*ps(ix,jy,1,n)
+        thetap=tth(ix,jy,klvrp,n)*(100000./ppmk)**kappa
+        ppmk=akz(klvrm)+bkz(klvrm)*ps(ix,jy,1,n)
+        thetam=tth(ix,jy,klvrm,n)*(100000./ppmk)**kappa
+        dthetadp=(thetap-thetam)/(ppml(klvrp)-ppml(klvrm))
+
+  ! Compute vertical position at pot. temperature surface on subgrid
+  ! and the wind at that position
+  !*****************************************************************
+  ! a) in x direction
+        ii=0
+        do i=ixvm,ixvp,jumpx
+          ivr=i
+          if (xglobal) then
+             if (i.lt.0) ivr=ivr+nxmin1
+             if (i.ge.nx) ivr=ivr-nx+1
+          end if
+          ii=ii+1
+  ! Search adjacent levels for current theta value
+  ! Spiral out from current level for efficiency
+          kup=klpt-1
+          kdn=klpt
+          kch=0
+40        continue
+  ! Upward branch
+          kup=kup+1
+          if (kch.ge.nlck) goto 21     ! No more levels to check,
+  !                                       ! and no values found
+          if (kup.ge.nuvz) goto 41
+          kch=kch+1
+          k=kup
+          ppmk=akz(k)+bkz(k)*ps(ivr,jy,1,n)
+          thdn=tth(ivr,jy,k,n)*(100000./ppmk)**kappa
+          ppmk=akz(k+1)+bkz(k+1)*ps(ivr,jy,1,n)
+          thup=tth(ivr,jy,k+1,n)*(100000./ppmk)**kappa
+
+
+      if (((thdn.ge.theta).and.(thup.le.theta)).or. &
+           ((thdn.le.theta).and.(thup.ge.theta))) then
+              dt1=abs(theta-thdn)
+              dt2=abs(theta-thup)
+              dt=dt1+dt2
+              if (dt.lt.eps) then   ! Avoid division by zero error
+                dt1=0.5             ! G.W., 10.4.1996
+                dt2=0.5
+                dt=1.0
+              endif
+          vx(ii)=(vvh(ivr,jy,k)*dt2+vvh(ivr,jy,k+1)*dt1)/dt
+              goto 20
+            endif
+41        continue
+  ! Downward branch
+          kdn=kdn-1
+          if (kdn.lt.1) goto 40
+          kch=kch+1
+          k=kdn
+          ppmk=akz(k)+bkz(k)*ps(ivr,jy,1,n)
+          thdn=tth(ivr,jy,k,n)*(100000./ppmk)**kappa
+          ppmk=akz(k+1)+bkz(k+1)*ps(ivr,jy,1,n)
+          thup=tth(ivr,jy,k+1,n)*(100000./ppmk)**kappa
+
+      if (((thdn.ge.theta).and.(thup.le.theta)).or. &
+           ((thdn.le.theta).and.(thup.ge.theta))) then
+              dt1=abs(theta-thdn)
+              dt2=abs(theta-thup)
+              dt=dt1+dt2
+              if (dt.lt.eps) then   ! Avoid division by zero error
+                dt1=0.5             ! G.W., 10.4.1996
+                dt2=0.5
+                dt=1.0
+              endif
+          vx(ii)=(vvh(ivr,jy,k)*dt2+vvh(ivr,jy,k+1)*dt1)/dt
+              goto 20
+            endif
+            goto 40
+  ! This section used when no values were found
+21      continue
+  ! Must use vv at current level and long. jux becomes smaller by 1
+        vx(ii)=vvh(ix,jy,kl)
+        jux=jux-1
+  ! Otherwise OK
+20        continue
+        end do
+      if (jux.gt.0) then
+      dvdx=(vx(2)-vx(1))/real(jux)/(dx*pi/180.)
+      else
+      dvdx=vvh(ivrp,jy,kl)-vvh(ivrm,jy,kl)
+      dvdx=dvdx/real(jumpx)/(dx*pi/180.)
+  ! Only happens if no equivalent theta value
+  ! can be found on either side, hence must use values
+  ! from either side, same pressure level.
+      end if
+
+  ! b) in y direction
+
+        jj=0
+        do j=jyvm,jyvp,jumpy
+          jj=jj+1
+  ! Search adjacent levels for current theta value
+  ! Spiral out from current level for efficiency
+          kup=klpt-1
+          kdn=klpt
+          kch=0
+70        continue
+  ! Upward branch
+          kup=kup+1
+          if (kch.ge.nlck) goto 51     ! No more levels to check,
+  !                                     ! and no values found
+          if (kup.ge.nuvz) goto 71
+          kch=kch+1
+          k=kup
+          ppmk=akz(k)+bkz(k)*ps(ix,j,1,n)
+          thdn=tth(ix,j,k,n)*(100000./ppmk)**kappa
+          ppmk=akz(k+1)+bkz(k+1)*ps(ix,j,1,n)
+          thup=tth(ix,j,k+1,n)*(100000./ppmk)**kappa
+      if (((thdn.ge.theta).and.(thup.le.theta)).or. &
+           ((thdn.le.theta).and.(thup.ge.theta))) then
+              dt1=abs(theta-thdn)
+              dt2=abs(theta-thup)
+              dt=dt1+dt2
+              if (dt.lt.eps) then   ! Avoid division by zero error
+                dt1=0.5             ! G.W., 10.4.1996
+                dt2=0.5
+                dt=1.0
+              endif
+              uy(jj)=(uuh(ix,j,k)*dt2+uuh(ix,j,k+1)*dt1)/dt
+              goto 50
+            endif
+71        continue
+  ! Downward branch
+          kdn=kdn-1
+          if (kdn.lt.1) goto 70
+          kch=kch+1
+          k=kdn
+          ppmk=akz(k)+bkz(k)*ps(ix,j,1,n)
+          thdn=tth(ix,j,k,n)*(100000./ppmk)**kappa
+          ppmk=akz(k+1)+bkz(k+1)*ps(ix,j,1,n)
+          thup=tth(ix,j,k+1,n)*(100000./ppmk)**kappa
+      if (((thdn.ge.theta).and.(thup.le.theta)).or. &
+           ((thdn.le.theta).and.(thup.ge.theta))) then
+              dt1=abs(theta-thdn)
+              dt2=abs(theta-thup)
+              dt=dt1+dt2
+              if (dt.lt.eps) then   ! Avoid division by zero error
+                dt1=0.5             ! G.W., 10.4.1996
+                dt2=0.5
+                dt=1.0
+              endif
+              uy(jj)=(uuh(ix,j,k)*dt2+uuh(ix,j,k+1)*dt1)/dt
+              goto 50
+            endif
+            goto 70
+  ! This section used when no values were found
+51      continue
+  ! Must use uu at current level and lat. juy becomes smaller by 1
+        uy(jj)=uuh(ix,jy,kl)
+        juy=juy-1
+  ! Otherwise OK
+50        continue
+        end do
+      if (juy.gt.0) then
+      dudy=(uy(2)-uy(1))/real(juy)/(dy*pi/180.)
+      else
+      dudy=uuh(ix,jyvp,kl)-uuh(ix,jyvm,kl)
+      dudy=dudy/real(jumpy)/(dy*pi/180.)
+      end if
+  !
+      pvh(ix,jy,kl)=dthetadp*(f+(dvdx/cosphi-dudy &
+           +uuh(ix,jy,kl)*tanphi)/r_earth)*(-1.e6)*9.81
+
+
+  !
+  ! Resest jux and juy
+      jux=jumpx
+      juy=jumpy
+      end do
+    end do
+10  continue
+  end do
+  !
+  ! Fill in missing PV values on poles, if present
+  ! Use mean PV of surrounding latitude ring
+  !
+      if (sglobal) then
+         do kl=1,nuvz
+            pvavr=0.
+            do ix=0,nxmin1
+               pvavr=pvavr+pvh(ix,1,kl)
+            end do
+            pvavr=pvavr/real(nx)
+            jy=0
+            do ix=0,nxmin1
+               pvh(ix,jy,kl)=pvavr
+            end do
          end do
-         !write(*,*) 'calcpv kappa exponentiation with kappa=',kappa
+      end if
+      if (nglobal) then
+         do kl=1,nuvz
+            pvavr=0.
+            do ix=0,nxmin1
+               pvavr=pvavr+pvh(ix,ny-2,kl)
+            end do
+            pvavr=pvavr/real(nx)
+            jy=nymin1
+            do ix=0,nxmin1
+               pvh(ix,jy,kl)=pvavr
+            end do
+         end do
+      end if
 
-!$omp    parallel default(none) shared(th_pre,tth,ppmstore, &
-!$omp      nxmin1,nymin1,nuvz,n) num_threads(omp_get_max_threads())
-!$omp    workshare
-         th_pre(0:nxmin1,0:nymin1,1:nuvz)=tth(0:nxmin1,0:nymin1,1:nuvz,n)* &
-           (100000./ppmstore(0:nxmin1,0:nymin1,1:nuvz))**kappa
-!$omp    end workshare
-!$omp    end parallel
-         write(*,*) 'calcpv rest...'
-         
-         jybords=[0,nymin1]
-         if (sglobal) jybords(1)=1
-         if (nglobal) jybords(2)=nymin1-1
-         jyvp_arr(jybords(1):jybords(2)) = [ (jy,jy=jybords(1)+1,jybords(2)+1) ]
-         jyvm_arr(jybords(1):jybords(2)) = [ (jy,jy=jybords(1)-1,jybords(2)-1) ]
-         jyvp_arr(jybords(2))=jybords(2)
-         jyvm_arr(jybords(1))=jybords(1)
-         jumpy_arr=2
-         jumpy_arr(jybords(1:2))=1
-
-         ixvp_arr(0:nxmin1) = [ (ix,ix=1,nxmin1+1) ]
-         ixvm_arr(0:nxmin1) = [ (ix,ix=-1,nxmin1-1) ]
-         jumpx_arr=2
-         if (.not. xglobal) then
-           ixvp_arr(nxmin1)=nxmin1
-           ixvm_arr(0)=0
-           jumpx_arr([0,nxmin1])=1
-         else
-           ixvp_arr(nxmin1)=1
-           ixvm_arr(0)=nxmin1-1
-         end if
-
-         ! Loop over entire grid
-         !**********************
-!$omp     parallel default(none) shared(jybords,jumpx_arr,jumpy_arr, &
-!$omp       ixvp_arr,ixvm_arr,jyvp_arr,jyvm_arr,th_pre,ppmstore,     &
-!$omp       vvh,pvh,nuvz,nxmin1,ylat0,dx,dy,n,nlck,xglobal,uuh)      &
-!$omp       private(f,cosphi,tanphi,phi,juy,jux,theta,thetap,thetam, &
-!$omp               thdn,thup,vx,dvdx,kup,kdn,ivrp,ivr,ivrm,         &
-!$omp               uy,dudy,dthetadp,jj,j,khi,klo,   &
-!$omp               klvrp,klvrm,k,klpt,kl,kch,i,dt1,dt2) &
-!$omp       num_threads(omp_get_max_threads())
-!$omp     do
-          DO jy=jybords(1),jybords(2)
-           phi = (ylat0 + jy * dy) * pi / 180.
-           f = SIN(phi)
-           cosphi = COS(phi)
-           tanphi = f/cosphi
-           f = 0.00014585 * f
-          
-           juy=jumpy_arr(jy)
-           
-           DO ix=0,nxmin1
-             ! Define absolute gap length
-             jux=jumpx_arr(ix)
-             
-             ! Loop over the vertical
-             !***********************
-             DO  kl=1,nuvz
-               theta=th_pre(ix,jy,kl)
-               klvrp=kl+1
-               klvrm=kl-1
-               klpt=kl
-               ! If top or bottom level, dthetadp is evaluated between the current
-               ! level and the level inside, otherwise between level+1 and level-1
-               
-               IF (klvrp > nuvz) klvrp=nuvz
-               IF (klvrm < 1) klvrm=1
-               thetap=th_pre(ix,jy,klvrp)
-               thetam=th_pre(ix,jy,klvrm)
-
-               dthetadp=(thetap-thetam)/(ppmstore(ix,jy,klvrp)-ppmstore(ix,jy,klvrm))
-               
-               ! Compute vertical position at pot. temperature surface on subgrid
-               ! and the wind at that position
-               !*****************************************************************
-               ! a) in x direction
-               xloop: DO i=1,2  
-                 if (i==1) ivr=ixvm_arr(ix)
-                 if (i==2) ivr=ixvp_arr(ix)
-
-                 ! Search adjacent levels for current theta value
-                 ! Spiral out from current level for efficiency
-                 kup=klpt
-                 kdn=klpt-1
-                 kch=0
-
-                 do while (kch<nlck) ! No more levels to check, no values found
-
-                   ! Upward branch and downward branch check
-                   do k=kup,kdn,kdn-kup
-                     if (k<nuvz .and. k>=1) then
-                       kch=kch+1
-
-                       if (th_pre(ivr,jy,k)<=th_pre(ivr,jy,k+1)) then
-                         khi=k+1
-                         klo=k
-                       else
-                         khi=k
-                         klo=k+1 
-                       end if
-
-                       dt1=th_pre(ivr,jy,khi)-theta
-                       dt2=theta-th_pre(ivr,jy,klo)
-                       if (dt1>=0 .and. dt2>=0) then
-                         if (dt1+dt2<eps) then
-                           dt1=0.5   ! Avoid division by zero error
-                           dt2=0.5   ! G.W., 10.4.1996
-                         end if
-                         vx(i)=(vvh(ivr,jy,khi)*dt2+vvh(ivr,jy,klo)*dt1)/(dt1+dt2)
-                         cycle xloop
-                       end if
-                     end if
-                   end do
-
-                   ! Downward branch k
-                   kdn=kdn-1
-                   ! Upward branch k
-                   kup=kup+1
-                 end do
-                 ! This section used when no values were found
-                 ! Must use vvh at current level and long. jux becomes smaller by 1
-                 vx(i)=vvh(ix,jy,kl)
-                 jux=jux-1
-                 ! Otherwise OK
-               end do xloop
-
-               IF (jux > 0) THEN
-                 dvdx=(vx(2)-vx(1))/real(jux)/(dx*pi/180.)
-               ELSE
-                 ivrp=ixvp_arr(ix)
-                 ivrm=ixvm_arr(ix)
-                 if (ix == 0) then
-                   if (xglobal) then
-                     ivrm=nxmin1-1
-                   end if
-                 else if (ix == nxmin1) then
-                   if (xglobal) then
-                     ivrp=1
-                   end if
-                 end if
-                 dvdx=vvh(ivrp,jy,kl)-vvh(ivrm,jy,kl)
-                 dvdx=dvdx/real(jumpx_arr(ix))/(dx*pi/180.)
-                 ! Only happens if no equivalent theta value
-                 ! can be found on either side, hence must use values
-                 ! from either side, same pressure level.
-               END IF
-               
-               ! b) in y direction
-               yloop: DO jj=1,2
-                 if (jj==1) j=jyvm_arr(jy)
-                 if (jj==2) j=jyvp_arr(jy)
-                 ! Search adjacent levels for current theta value
-                 ! Spiral out from current level for efficiency
-                 kup=klpt
-                 kdn=klpt-1
-                 kch=0
-                 DO WHILE (kch<nlck) ! No more levels to check, no values found
-                   ! Upward branch and downward branch check
-                   do k=kup,kdn,kdn-kup
-                     if (k<nuvz .and. k>=1) then
-                       kch=kch+1
-
-                       if (th_pre(ix,j,k)<=th_pre(ix,j,k+1)) then
-                         khi=k+1
-                         klo=k
-                       else
-                         khi=k
-                         klo=k+1 
-                       end if
-
-                       dt1=th_pre(ix,j,khi)-theta
-                       dt2=theta-th_pre(ix,j,klo)
-                       if (dt1>=0 .and. dt2>=0) then
-                         if (dt1+dt2<eps) then
-                           dt1=0.5   ! Avoid division by zero error
-                           dt2=0.5   ! G.W., 10.4.1996
-                         end if
-                         uy(jj)=(uuh(ix,j,khi)*dt2+uuh(ix,j,klo)*dt1)/(dt1+dt2)
-                         cycle yloop
-                       end if
-                     end if
-                   end do
-
-                   ! Downward branch k
-                   kdn=kdn-1
-                   ! Upward branch k
-                   kup=kup+1
-                 END DO
-                 ! This section used when no values were found
-                 ! Must use uu at current level and lat. juy becomes smaller by 1
-                 uy(jj)=uuh(ix,jy,kl)
-                 juy=juy-1
-                 ! Otherwise OK
-               END DO yloop
-               IF (juy > 0) THEN
-                 dudy=(uy(2)-uy(1))/real(juy)/(dy*pi/180.)
-               ELSE
-                 dudy=uuh(ix,jyvp_arr(jy),kl)-uuh(ix,jyvm_arr(jy),kl)
-                 dudy=dudy/real(jumpy_arr(jy))/(dy*pi/180.)
-               END IF
-               
-               pvh(ix,jy,kl)=dthetadp*(f+(dvdx/cosphi-dudy+uuh(ix,jy,kl)*tanphi)/r_earth)*(-1.e6)*9.81
-               
-               !"RESET"
-               jux=jumpx_arr(ix)
-               juy=jumpy_arr(jy)
-             END DO
-           END DO
-         END DO
-!$omp    end do
-!$omp    end parallel
-         
-         ! Fill in missing PV values on poles, if present
-         ! Use mean PV of surrounding latitude ring
-         
-         if (sglobal) then
-           do  kl=1,nuvz
-             pvh(0:nxmin1,0,kl)=sum(pvh(0:nxmin1,1,kl))/real(nxmin1+1)
-           end do
-         end if
-         if (nglobal) then
-           do  kl=1,nuvz
-             pvh(0:nxmin1,nymin1,kl)=sum(pvh(0:nxmin1,nymin1-1,kl))/real(nxmin1+1)
-           end do
-         end if
-         write(*,*) 'leave calcpv'
-         
-       end subroutine
-       
+end subroutine calcpv

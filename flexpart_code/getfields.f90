@@ -71,10 +71,10 @@ subroutine getfields(itime,nstop)
 
   integer :: indj,itime,nstop,memaux
 
-  real, target :: uuh(0:nxmax-1,0:nymax-1,nuvzmax)
-  real, target :: vvh(0:nxmax-1,0:nymax-1,nuvzmax)
-  real, target :: pvh(0:nxmax-1,0:nymax-1,nuvzmax)
-  real, target :: wwh(0:nxmax-1,0:nymax-1,nwzmax)
+  real :: uuh(0:nxmax-1,0:nymax-1,nuvzmax)
+  real :: vvh(0:nxmax-1,0:nymax-1,nuvzmax)
+  real :: pvh(0:nxmax-1,0:nymax-1,nuvzmax)
+  real :: wwh(0:nxmax-1,0:nymax-1,nwzmax)
   real :: uuhn(0:nxmaxn-1,0:nymaxn-1,nuvzmax,maxnests)
   real :: vvhn(0:nxmaxn-1,0:nymaxn-1,nuvzmax,maxnests)
   real :: pvhn(0:nxmaxn-1,0:nymaxn-1,nuvzmax,maxnests)

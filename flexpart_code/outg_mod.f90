@@ -22,7 +22,6 @@
 module outg_mod
 
   implicit none
-  save
 
   real,allocatable, dimension (:) :: outheight
   real,allocatable, dimension (:) :: outheighthalf

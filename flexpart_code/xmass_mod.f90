@@ -21,9 +21,8 @@
 
 module xmass_mod
   
-  use par_mod, only : dp
   implicit none
   
-  real(kind=dp), allocatable, dimension (:) :: xmasssave
+  real,allocatable, dimension (:) :: xmasssave
   
 end module xmass_mod

@@ -17,7 +17,6 @@ module com_mod
        maxreceptor, maxpart, maxrand, nwzmax, nuvzmax
 
   implicit none
-  save
 
   !****************************************************************
   ! Variables defining where FLEXPART input/output files are stored
@@ -305,10 +304,10 @@ module com_mod
   ! Fixed fields, unchangeable with time
   !*************************************
 
-  real, target :: oro(0:nxmax-1,0:nymax-1)
-  real, target :: excessoro(0:nxmax-1,0:nymax-1)
-  real, target :: lsm(0:nxmax-1,0:nymax-1)
-  real, target :: xlanduse(0:nxmax-1,0:nymax-1,numclass)
+  real :: oro(0:nxmax-1,0:nymax-1)
+  real :: excessoro(0:nxmax-1,0:nymax-1)
+  real :: lsm(0:nxmax-1,0:nymax-1)
+  real :: xlanduse(0:nxmax-1,0:nymax-1,numclass)
 
   ! oro [m]              orography of the ECMWF model
   ! excessoro            excess orography mother domain
@@ -328,8 +327,8 @@ module com_mod
   real :: pv(0:nxmax-1,0:nymax-1,nzmax,2)
   real :: rho(0:nxmax-1,0:nymax-1,nzmax,2)
   real :: drhodz(0:nxmax-1,0:nymax-1,nzmax,2)
-  real, target :: tth(0:nxmax-1,0:nymax-1,nuvzmax,2)
-  real, target :: qvh(0:nxmax-1,0:nymax-1,nuvzmax,2)
+  real :: tth(0:nxmax-1,0:nymax-1,nuvzmax,2)
+  real :: qvh(0:nxmax-1,0:nymax-1,nuvzmax,2)
   real :: pplev(0:nxmax-1,0:nymax-1,nuvzmax,2)
   integer(kind=1) :: clouds(0:nxmax-1,0:nymax-1,nzmax,2)
   integer :: cloudsh(0:nxmax-1,0:nymax-1,2)
@@ -351,25 +350,25 @@ module com_mod
   ! 2d fields
   !**********
 
-  real, target :: ps(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: sd(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: msl(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: tcc(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: u10(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: v10(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: tt2(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: td2(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: lsprec(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: convprec(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: sshf(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: ssr(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: surfstr(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: ustar(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: wstar(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: hmix(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: tropopause(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: oli(0:nxmax-1,0:nymax-1,1,2)
-  real, target :: diffk(0:nxmax-1,0:nymax-1,1,2)
+  real :: ps(0:nxmax-1,0:nymax-1,1,2)
+  real :: sd(0:nxmax-1,0:nymax-1,1,2)
+  real :: msl(0:nxmax-1,0:nymax-1,1,2)
+  real :: tcc(0:nxmax-1,0:nymax-1,1,2)
+  real :: u10(0:nxmax-1,0:nymax-1,1,2)
+  real :: v10(0:nxmax-1,0:nymax-1,1,2)
+  real :: tt2(0:nxmax-1,0:nymax-1,1,2)
+  real :: td2(0:nxmax-1,0:nymax-1,1,2)
+  real :: lsprec(0:nxmax-1,0:nymax-1,1,2)
+  real :: convprec(0:nxmax-1,0:nymax-1,1,2)
+  real :: sshf(0:nxmax-1,0:nymax-1,1,2)
+  real :: ssr(0:nxmax-1,0:nymax-1,1,2)
+  real :: surfstr(0:nxmax-1,0:nymax-1,1,2)
+  real :: ustar(0:nxmax-1,0:nymax-1,1,2)
+  real :: wstar(0:nxmax-1,0:nymax-1,1,2)
+  real :: hmix(0:nxmax-1,0:nymax-1,1,2)
+  real :: tropopause(0:nxmax-1,0:nymax-1,1,2)
+  real :: oli(0:nxmax-1,0:nymax-1,1,2)
+  real :: diffk(0:nxmax-1,0:nymax-1,1,2)
 
   ! ps                   surface pressure
   ! sd                   snow depth
@@ -671,6 +670,5 @@ module com_mod
 
   ! rannumb                 field of normally distributed random numbers
 
-  logical :: verttransform_inited = .false.
 
 end module com_mod

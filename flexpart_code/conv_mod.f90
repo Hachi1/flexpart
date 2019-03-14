@@ -13,7 +13,6 @@ module conv_mod
   use par_mod, only: nconvlevmax, na, nxmax, nymax, nxmaxn, nymaxn, maxnests
 
   implicit none
-  save
 
   !integer,parameter :: nconvlevmax = nuvzmax-1, &
   !                     na = nconvlevmax+1

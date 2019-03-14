@@ -82,9 +82,7 @@ subroutine verttransform(n,uuh,vvh,wwh,pvh)
   real :: pvh(0:nxmax-1,0:nymax-1,nuvzmax)
   real :: wwh(0:nxmax-1,0:nymax-1,nwzmax)
   real :: wzlev(nwzmax),uvwzlev(0:nxmax-1,0:nymax-1,nzmax)
-  real :: invcos, invdz
   real,parameter :: const=r_air/ga
-  real,parameter :: inv_one_eighty = 1. / 180.
 
   logical :: init = .true.
 
@@ -228,7 +226,7 @@ subroutine verttransform(n,uuh,vvh,wwh,pvh)
 
 
       do kz=2,nwz-1
-        wzlev(kz)=(uvzlev(kz+1)+uvzlev(kz))*0.5
+        wzlev(kz)=(uvzlev(kz+1)+uvzlev(kz))/2.
       end do
       wzlev(nwz)=wzlev(nwz-1)+ &
            uvzlev(nuvz)-uvzlev(nuvz-1)
@@ -277,34 +275,34 @@ subroutine verttransform(n,uuh,vvh,wwh,pvh)
       rho(ix,jy,nz,n)=rhoh(nuvz)
       kmin=2
       do iz=2,nz-1
-        if(height(iz).gt.uvzlev(nuvz)) then
-          uu(ix,jy,iz,n)=uu(ix,jy,nz,n)
-          vv(ix,jy,iz,n)=vv(ix,jy,nz,n)
-          tt(ix,jy,iz,n)=tt(ix,jy,nz,n)
-          qv(ix,jy,iz,n)=qv(ix,jy,nz,n)
-          pv(ix,jy,iz,n)=pv(ix,jy,nz,n)
-          rho(ix,jy,iz,n)=rho(ix,jy,nz,n)
-        else
-          do kz=kmin,nuvz
-            if ((height(iz).gt.uvzlev(kz-1)).and. &
-                (height(iz).le.uvzlev(kz))) then
-              dz1=height(iz)-uvzlev(kz-1)
-              dz2=uvzlev(kz)-height(iz)
-              dz=dz1+dz2
-              invdz = 1./dz
-              uu(ix,jy,iz,n)=(uuh(ix,jy,kz-1)*dz2+uuh(ix,jy,kz)*dz1)*invdz
-              vv(ix,jy,iz,n)=(vvh(ix,jy,kz-1)*dz2+vvh(ix,jy,kz)*dz1)*invdz
-              tt(ix,jy,iz,n)=(tth(ix,jy,kz-1,n)*dz2 &
-                    +tth(ix,jy,kz,n)*dz1)*invdz
-              qv(ix,jy,iz,n)=(qvh(ix,jy,kz-1,n)*dz2 &
-                    +qvh(ix,jy,kz,n)*dz1)*invdz
-              pv(ix,jy,iz,n)=(pvh(ix,jy,kz-1)*dz2+pvh(ix,jy,kz)*dz1)*invdz
-              rho(ix,jy,iz,n)=(rhoh(kz-1)*dz2+rhoh(kz)*dz1)*invdz
-              kmin=kz
-              exit
-            endif
-          end do
-        end if
+        do kz=kmin,nuvz
+          if(height(iz).gt.uvzlev(nuvz)) then
+            uu(ix,jy,iz,n)=uu(ix,jy,nz,n)
+            vv(ix,jy,iz,n)=vv(ix,jy,nz,n)
+            tt(ix,jy,iz,n)=tt(ix,jy,nz,n)
+            qv(ix,jy,iz,n)=qv(ix,jy,nz,n)
+            pv(ix,jy,iz,n)=pv(ix,jy,nz,n)
+            rho(ix,jy,iz,n)=rho(ix,jy,nz,n)
+            goto 30
+          endif
+          if ((height(iz).gt.uvzlev(kz-1)).and. &
+               (height(iz).le.uvzlev(kz))) then
+           dz1=height(iz)-uvzlev(kz-1)
+           dz2=uvzlev(kz)-height(iz)
+           dz=dz1+dz2
+           uu(ix,jy,iz,n)=(uuh(ix,jy,kz-1)*dz2+uuh(ix,jy,kz)*dz1)/dz
+           vv(ix,jy,iz,n)=(vvh(ix,jy,kz-1)*dz2+vvh(ix,jy,kz)*dz1)/dz
+           tt(ix,jy,iz,n)=(tth(ix,jy,kz-1,n)*dz2 &
+                +tth(ix,jy,kz,n)*dz1)/dz
+           qv(ix,jy,iz,n)=(qvh(ix,jy,kz-1,n)*dz2 &
+                +qvh(ix,jy,kz,n)*dz1)/dz
+           pv(ix,jy,iz,n)=(pvh(ix,jy,kz-1)*dz2+pvh(ix,jy,kz)*dz1)/dz
+           rho(ix,jy,iz,n)=(rhoh(kz-1)*dz2+rhoh(kz)*dz1)/dz
+           kmin=kz
+           goto 30
+          endif
+        end do
+30      continue
       end do
 
 
@@ -351,13 +349,12 @@ subroutine verttransform(n,uuh,vvh,wwh,pvh)
   !****************************************************************
 
   do jy=1,ny-2
-    invcos = 1./cos((real(jy)*dy+ylat0)*pi180)
     do ix=1,nx-2
 
       kmin=2
       do iz=2,nz-1
 
-        ui=uu(ix,jy,iz,n)*dxconst*invcos
+        ui=uu(ix,jy,iz,n)*dxconst/cos((real(jy)*dy+ylat0)*pi180)
         vi=vv(ix,jy,iz,n)*dyconst
 
         do kz=kmin,nz
@@ -378,12 +375,12 @@ subroutine verttransform(n,uuh,vvh,wwh,pvh)
         ixp=ix+1
         jyp=jy+1
 
-        dzdx1=(uvwzlev(ixp,jy,kl)-uvwzlev(ix1,jy,kl))*0.5
-        dzdx2=(uvwzlev(ixp,jy,klp)-uvwzlev(ix1,jy,klp))*0.5
+        dzdx1=(uvwzlev(ixp,jy,kl)-uvwzlev(ix1,jy,kl))/2.
+        dzdx2=(uvwzlev(ixp,jy,klp)-uvwzlev(ix1,jy,klp))/2.
         dzdx=(dzdx1*dz2+dzdx2*dz1)/dz
 
-        dzdy1=(uvwzlev(ix,jyp,kl)-uvwzlev(ix,jy1,kl))*0.5
-        dzdy2=(uvwzlev(ix,jyp,klp)-uvwzlev(ix,jy1,klp))*0.5
+        dzdy1=(uvwzlev(ix,jyp,kl)-uvwzlev(ix,jy1,kl))/2.
+        dzdy2=(uvwzlev(ix,jyp,klp)-uvwzlev(ix,jy1,klp))/2.
         dzdy=(dzdy1*dz2+dzdy2*dz1)/dz
 
         ww(ix,jy,iz,n)=ww(ix,jy,iz,n)+(dzdx*ui+dzdy*vi)
@@ -399,11 +396,11 @@ subroutine verttransform(n,uuh,vvh,wwh,pvh)
   !*******************************************************************
 
   if (nglobal) then
-    do iz=1,nz
-      do jy=int(switchnorthg)-2,nymin1
-        ylat=ylat0+real(jy)*dy
-        do ix=0,nxmin1
-          xlon=xlon0+real(ix)*dx
+    do jy=int(switchnorthg)-2,nymin1
+      ylat=ylat0+real(jy)*dy
+      do ix=0,nxmin1
+        xlon=xlon0+real(ix)*dx
+        do iz=1,nz
           call cc2gll(northpolemap,ylat,xlon,uu(ix,jy,iz,n), &
                vv(ix,jy,iz,n),uupol(ix,jy,iz,n), &
                vvpol(ix,jy,iz,n))
@@ -419,7 +416,7 @@ subroutine verttransform(n,uuh,vvh,wwh,pvh)
   !   AMSnauffer Nov 18 2004 Added check for case vv=0
   !
       xlon=xlon0+real(nx/2-1)*dx
-      xlonr=xlon*pi*inv_one_eighty
+      xlonr=xlon*pi/180.
       ffpol=sqrt(uu(nx/2-1,nymin1,iz,n)**2+ &
            vv(nx/2-1,nymin1,iz,n)**2)
       if (vv(nx/2-1,nymin1,iz,n).lt.0.) then
@@ -436,7 +433,7 @@ subroutine verttransform(n,uuh,vvh,wwh,pvh)
 
   ! CALCULATE U,V FOR 180 DEG, TRANSFORM TO POLAR STEREOGRAPHIC GRID
       xlon=180.0
-      xlonr=xlon*pi*inv_one_eighty
+      xlonr=xlon*pi/180.
       ylat=90.0
       uuaux=-ffpol*sin(xlonr+ddpol)
       vvaux=-ffpol*cos(xlonr+ddpol)
@@ -475,11 +472,11 @@ subroutine verttransform(n,uuh,vvh,wwh,pvh)
   !*******************************************************************
 
   if (sglobal) then
-    do iz=1,nz
-      do jy=0,int(switchsouthg)+3
-        ylat=ylat0+real(jy)*dy
-        do ix=0,nxmin1
-          xlon=xlon0+real(ix)*dx
+    do jy=0,int(switchsouthg)+3
+      ylat=ylat0+real(jy)*dy
+      do ix=0,nxmin1
+        xlon=xlon0+real(ix)*dx
+        do iz=1,nz
           call cc2gll(southpolemap,ylat,xlon,uu(ix,jy,iz,n), &
                vv(ix,jy,iz,n),uupol(ix,jy,iz,n), &
                vvpol(ix,jy,iz,n))
@@ -494,7 +491,7 @@ subroutine verttransform(n,uuh,vvh,wwh,pvh)
   !   AMSnauffer Nov 18 2004 Added check for case vv=0
   !
       xlon=xlon0+real(nx/2-1)*dx
-      xlonr=xlon*pi*inv_one_eighty
+      xlonr=xlon*pi/180.
       ffpol=sqrt(uu(nx/2-1,0,iz,n)**2+ &
            vv(nx/2-1,0,iz,n)**2)
       if (vv(nx/2-1,0,iz,n).lt.0.) then
@@ -511,16 +508,17 @@ subroutine verttransform(n,uuh,vvh,wwh,pvh)
 
   ! CALCULATE U,V FOR 180 DEG, TRANSFORM TO POLAR STEREOGRAPHIC GRID
       xlon=180.0
-      xlonr=xlon*pi*inv_one_eighty
+      xlonr=xlon*pi/180.
       ylat=-90.0
       uuaux=+ffpol*sin(xlonr-ddpol)
       vvaux=-ffpol*cos(xlonr-ddpol)
       call cc2gll(northpolemap,ylat,xlon,uuaux,vvaux,uupolaux, &
            vvpolaux)
 
+      jy=0
       do ix=0,nxmin1
-        uupol(ix,0,iz,n)=uupolaux
-        vvpol(ix,0,iz,n)=vvpolaux
+        uupol(ix,jy,iz,n)=uupolaux
+        vvpol(ix,jy,iz,n)=vvpolaux
       end do
     end do
 
@@ -530,12 +528,14 @@ subroutine verttransform(n,uuh,vvh,wwh,pvh)
 
     do iz=1,nz
       wdummy=0.
+      jy=1
       do ix=0,nxmin1
-        wdummy=wdummy+ww(ix,1,iz,n)
+        wdummy=wdummy+ww(ix,jy,iz,n)
       end do
       wdummy=wdummy/real(nx)
+      jy=0
       do ix=0,nxmin1
-        ww(ix,0,iz,n)=wdummy
+        ww(ix,jy,iz,n)=wdummy
       end do
     end do
   endif
@@ -544,14 +544,14 @@ subroutine verttransform(n,uuh,vvh,wwh,pvh)
   !write (*,*) 'initializing clouds, n:',n,nymin1,nxmin1,nz
   !   create a cloud and rainout/washout field, clouds occur where rh>80%
   !   total cloudheight is stored at level 0
-  do kz_inv=1,nz-1
-    kz=nz-kz_inv+1
-    do jy=0,nymin1
-      do ix=0,nxmin1
-         rain_cloud_above=0
-         lsp=lsprec(ix,jy,1,n)
-         convp=convprec(ix,jy,1,n)
-         cloudsh(ix,jy,n)=0
+  do jy=0,nymin1
+    do ix=0,nxmin1
+      rain_cloud_above=0
+      lsp=lsprec(ix,jy,1,n)
+      convp=convprec(ix,jy,1,n)
+      cloudsh(ix,jy,n)=0
+      do kz_inv=1,nz-1
+         kz=nz-kz_inv+1
          pressure=rho(ix,jy,kz,n)*r_air*tt(ix,jy,kz,n)
          rh=qv(ix,jy,kz,n)/f_qvsat(pressure,tt(ix,jy,kz,n))
          clouds(ix,jy,kz,n)=0

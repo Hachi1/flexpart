@@ -22,7 +22,6 @@
 module point_mod
 
   implicit none
-  save
 
   integer, allocatable, dimension (:) :: ireleasestart
   integer, allocatable, dimension (:) :: ireleaseend

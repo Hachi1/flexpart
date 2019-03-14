@@ -26,12 +26,10 @@
 module cmapf_mod
 
   use par_mod, only: dp
-  !this module is only a procedure module -> needs no "save" attribute
 
   implicit none
   private
 
-  !routine names public declaration
   public :: cc2gll, cll2xy, cgszll, cxy2ll, stlmbr, stcm2p
 
   real,parameter :: rearth=6371.2, almst1=.9999999
@@ -49,7 +47,8 @@ subroutine cc2gll (strcmp, xlat,xlong, ue,vn, ug,vg)
   implicit none
 
   real :: strcmp(9), xlat, xlong, ue, vn, ug, vg
-  real(kind=dp) :: xpolg,ypolg,along,slong,clong,rot,tempdb,atempdb
+
+  real(kind=dp) :: xpolg,ypolg,along,slong,clong,rot
 
   along = cspanf( xlong - strcmp(2), -180., 180.)
   if (xlat.gt.89.985) then
@@ -61,28 +60,8 @@ subroutine cc2gll (strcmp, xlat,xlong, ue,vn, ug,vg)
   else
     rot = - strcmp(1) * along
   endif
-
-  tempdb=radpdg*rot
-  atempdb=abs(tempdb)
-  
-  if (atempdb<=pi) then
-    if (atempdb<0.05E0_dp) then
-      slong=tempdb*tempdb
-      clong=1.0E0_dp-slong/2.0E0_dp+slong*slong/24.0E0_dp
-      slong=tempdb-slong*tempdb/6.0E0_dp+slong*slong*tempdb/120.0E0_dp   
-    else
-      clong = cos(tempdb)
-      if (tempdb<0.0E0_dp) then
-        slong = -1.0E0_dp * sqrt( 1.0E0_dp - clong*clong )
-      else 
-        slong = sqrt( 1.0E0_dp - clong*clong )
-      end if
-    end if      
-  else
-    clong=cos(tempdb)
-    slong=sin(tempdb)
-  end if
-
+  slong = sin( radpdg * rot )
+  clong = cos( radpdg * rot )
   xpolg = slong * strcmp(5) + clong * strcmp(6)
   ypolg = clong * strcmp(5) - slong * strcmp(6)
   ug = ypolg * ue + xpolg * vn

@@ -185,7 +185,7 @@ subroutine readreleases
    write (*,*) ' Releasepoints allocated: ', numpoint
 
    do i=1,numpoint
-     xmasssave(i)=0.0_dp
+     xmasssave(i)=0.
    end do
 
   !now save the information
@@ -385,9 +385,9 @@ subroutine readreleases
     if (ldirect.eq.1) then
       if ((jul1.lt.bdate).or.(jul2.gt.edate)) then
         write(*,*) 'FLEXPART MODEL ERROR'
-        write(*,*) 'Release starts before simulation begins or ends (1)'
+        write(*,*) 'Release starts before simulation begins or ends'
         write(*,*) 'after simulation stops.'
-        write(*,*) 'Make files COMMAND and RELEASES consistent (1).'
+        write(*,*) 'Make files COMMAND and RELEASES consistent.'
         stop
       endif
       ireleasestart(numpoint)=int((jul1-bdate)*86400.)
@@ -395,9 +395,9 @@ subroutine readreleases
     else if (ldirect.eq.-1) then
       if ((jul1.lt.edate).or.(jul2.gt.bdate)) then
         write(*,*) 'FLEXPART MODEL ERROR'
-        write(*,*) 'Release starts before simulation begins or ends (2)'
+        write(*,*) 'Release starts before simulation begins or ends'
         write(*,*) 'after simulation stops.'
-        write(*,*) 'Make files COMMAND and RELEASES consistent (2).'
+        write(*,*) 'Make files COMMAND and RELEASES consistent.'
         stop
       endif
       ireleasestart(numpoint)=int((jul1-bdate)*86400.)

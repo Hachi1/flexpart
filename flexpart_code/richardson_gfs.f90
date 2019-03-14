@@ -145,10 +145,6 @@ subroutine richardson(psurf,ust,ttlev,qvlev,ulev,vlev,nuvz, &
 
   ! Determine Richardson number between the critical levels
   !********************************************************
-  ! JMA: It may happen that k >= nuvz:
-  ! JMA: In that case: k is set to nuvz 
-
-  if (k .gt. nuvz) k = nuvz ! JMA
 
   zl1=zold
   theta1=thetaold

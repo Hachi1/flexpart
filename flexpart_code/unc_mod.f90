@@ -22,7 +22,6 @@
 module unc_mod
 
   implicit none
-  save
 
   real,allocatable, dimension (:,:,:,:,:,:,:) :: gridunc
   real,allocatable, dimension (:,:,:,:,:,:,:) :: griduncn

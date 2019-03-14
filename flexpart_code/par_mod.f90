@@ -34,7 +34,6 @@
 module par_mod
 
   implicit none
-  save
 
   !****************************************************************
   ! Parameter defining KIND parameter for "double precision"
@@ -123,12 +122,9 @@ module par_mod
 
   !integer,parameter :: nxmax=361,nymax=181,nuvzmax=92,nwzmax=92,nzmax=92
   !integer,parameter :: nxmax=361,nymax=181,nuvzmax=61,nwzmax=61,nzmax=61
-  !integer,parameter :: nxmax=721,nymax=361,nuvzmax=64,nwzmax=64,nzmax=64
-  integer,parameter :: nxmax=1441,nymax=721,nuvzmax=34,nwzmax=34,nzmax=34   !for GFS as of 2016
-  !integer,parameter :: nxmax=1801,nymax=901,nuvzmax=64,nwzmax=64,nzmax=64  !for ECMWF 0.2deg
-
+  integer,parameter :: nxmax=721,nymax=361,nuvzmax=64,nwzmax=64,nzmax=64
   !integer,parameter :: nxshift=359  ! for ECMWF
-  integer,parameter :: nxshift=0     ! for GFS and pre-processed ECMWF
+  integer,parameter :: nxshift=0     ! for GFS
 
   integer,parameter :: nconvlevmax = nuvzmax-1
   integer,parameter :: na = nconvlevmax+1

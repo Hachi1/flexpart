@@ -74,21 +74,16 @@ subroutine calcmatrix(lconv,delt,cbmf)
   ! not given
 
   phconv(1) = psconv
-  
-  
-  ! JMA / SH Bugfix phconv was set in loop with access to undefined pconv(nuvz)
-  phconv(1) = psconv
-  phconv(2:nuvz-1) = 0.5*(pconv(2:nuvz-1)+pconv(1:nuvz-2))
-  phconv(nuvz) = pconv(nuvz-1)
-
-  dpr(1:nuvz-1) = phconv(1:nuvz-1)-phconv(2:nuvz)
-
-  do k = 1,nuvz-1
+  do kuvz = 2,nuvz
+    k = kuvz-1
+    phconv(kuvz) =  0.5*(pconv(kuvz)+pconv(k))
+    dpr(k) = phconv(k) - phconv(kuvz)
     qsconv(k) = f_qvsat( pconv(k), tconv(k) )
-  end do
-
   ! initialize mass fractions
-  fmassfrac(1:nuvz-1,1:nconvlev)=0.0
+    do kk=1,nconvlev
+      fmassfrac(k,kk)=0.
+    enddo
+  end do
 
   !note that Emanuel says it is important
   !a. to set this =0. every grid point

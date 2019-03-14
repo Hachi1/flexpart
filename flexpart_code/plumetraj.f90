@@ -68,7 +68,6 @@ subroutine plumetraj(itime)
   real :: topo,topocenter,hm(2),hmixi,hmixfract,hmixcenter
   real :: pv1(2),pvprof(2),pvi,pvcenter,pvfract,tr(2),tri,tropofract
   real :: tropocenter
-  character(len=255) :: out_fmtstr
 
 
   dt1=real(itime-memtime(1))
@@ -233,13 +232,12 @@ subroutine plumetraj(itime)
   ! Write out results in trajectory data file
   !******************************************
 
-      out_fmtstr=''
-      write(out_fmtstr,'(i0)') ncluster
-      out_fmtstr='(i5,i8,2f9.4,4f8.1,f8.2,4f8.1,3f6.1,'//trim(out_fmtstr)//'(2f8.3,f7.0,f6.1,f8.1))'
-
-      write(unitouttraj,out_fmtstr) j,itime-(ireleasestart(j)+ireleaseend(j))/2, &
+      write(unitouttraj,'(i5,i8,2f9.4,4f8.1,f8.2,4f8.1,3f6.1,&
+           &5(2f8.3,f7.0,f6.1,f8.1))')&
+           &j,itime-(ireleasestart(j)+ireleaseend(j))/2, &
            xcenter,ycenter,zcenter,topocenter,hmixcenter,tropocenter, &
-           pvcenter,rmsdist,rms,zrmsdist,zrms,hmixfract,pvfract,tropofract, &
+           pvcenter,rmsdist,rms,zrmsdist,zrms,hmixfract,pvfract, &
+           tropofract, &
            (xclust(k),yclust(k),zclust(k),fclust(k),rmsclust(k), &
            k=1,ncluster)
     endif

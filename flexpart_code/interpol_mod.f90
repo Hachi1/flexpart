@@ -3,7 +3,6 @@ module interpol_mod
   use par_mod, only: nzmax, maxspec
 
   implicit none
-  save
 
   real :: uprof(nzmax),vprof(nzmax),wprof(nzmax)
   real :: usigprof(nzmax),vsigprof(nzmax),wsigprof(nzmax)
